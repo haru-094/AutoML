@@ -29,6 +29,12 @@ htmlcov/
 .env.*
 !.env.example
 
+# Streamlit
+.streamlit/secrets.toml
+
+# Temporary project scripts
+test_phasse1.py
+
 # Jupyter
 .ipynb_checkpoints/
 
