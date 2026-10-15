@@ -3,6 +3,10 @@ from config import config
 
 
 def split_data(df, target, stratify=False):
+    # Stop early with a clear message if the target column doesn't exist
+    if target not in df.columns:
+        raise ValueError(f"Target column '{target}' not found. Available columns: {list(df.columns)}")
+
     # 1. Rows without a target value cannot be used for training
     df = df.dropna(subset=[target])
 
