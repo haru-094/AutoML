@@ -40,3 +40,6 @@ test_phasse1.py
 
 # macOS
 .DS_Store
+
+# Visualization
+check_*.png

@@ -1,10 +1,21 @@
 import pandas as pd
 from config import config
 
+COMMON_TARGET_NAMES = ["target", "label", "class", "y", "survived",
+                       "price", "selling_price", "charges", "salary"]
+
 
 def list_samples():
-    """Names of the sample datasets in data/sample (without .csv)."""
+    """Names of the sample datasets in the dataset folder (without .csv)."""
     return [file.stem for file in config.SAMPLE_DIR.glob("*.csv")]
+
+
+def guess_target(df):
+    """Returns the position (index) of the most likely target column."""
+    for i, col in enumerate(df.columns):
+        if col.lower() in COMMON_TARGET_NAMES:
+            return i                       # a column with a typical target name
+    return len(df.columns) - 1             # otherwise the last column
 
 
 def load_dataset(file=None, sample_name=None):
