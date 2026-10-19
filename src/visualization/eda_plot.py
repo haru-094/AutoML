@@ -1,5 +1,8 @@
-import matplotlib.pyplot as plt
 import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+sns.set_palette("husl")
 from config import config
 from sklearn.feature_selection import mutual_info_classif
 
@@ -225,5 +228,62 @@ def plot_feature_signal(X, y):
     fig, ax = plt.subplots(figsize=(7, 0.4 * len(scores) + 1.5))
     scores[::-1].plot(kind="barh", ax=ax, color="firebrick")     # strongest at the top
     ax.set_title("Feature signal for the target (mutual information)")
+    fig.tight_layout()
+    return fig
+
+def make_grid(n_plots):
+    """Creates a grid of empty plots. Returns the figure and a flat list of axes."""
+    n_cols = config.GRID_COLUMNS
+    n_rows = -(-n_plots // n_cols)                  # divide and round up
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(5 * n_cols, 3.5 * n_rows))
+    axes = np.array(axes).ravel()
+    for ax in axes[n_plots:]:
+        ax.axis("off")                              # hide the unused boxes
+    return fig, axes
+
+
+def plot_numeric_grid(X, y, task):
+    """Distribution of each continuous feature (colored by class for classification)."""
+    numeric_cols, _ = get_column_types(X)
+    cols = [c for c in numeric_cols if X[c].nunique() > config.MAX_DISCRETE]
+    cols = cols[:config.GRID_MAX_PLOTS]
+    if not cols:
+        return None
+
+    data = X[cols].copy()
+    hue = None
+    if task == "classification":
+        data["target"] = y.astype(str)              # text, so each class gets its own color
+        hue = "target"
+
+    fig, axes = make_grid(len(cols))
+    for ax, col in zip(axes, cols):
+        sns.histplot(data=data, x=col, hue=hue, bins=30, ax=ax)
+        ax.set_title(col)
+    fig.tight_layout()
+    return fig
+
+
+def plot_category_grid(X, y, task):
+    """Bars for each categorical or low-count feature (class percentages for classification)."""
+    numeric_cols, categorical_cols = get_column_types(X)
+    discrete = [c for c in numeric_cols if X[c].nunique() <= config.MAX_DISCRETE]
+    cols = (categorical_cols + discrete)[:config.GRID_MAX_PLOTS]
+    if not cols:
+        return None
+
+    fig, axes = make_grid(len(cols))
+    for ax, col in zip(axes, cols):
+        top = X[col].value_counts().index[:config.TOP_N_CATEGORIES]
+        keep = X[col].isin(top)
+
+        if task == "classification":
+            table = pd.crosstab(X.loc[keep, col], y[keep], normalize="index") * 100
+            table.plot(kind="bar", stacked=True, ax=ax, legend=False)
+            ax.set_ylabel("% in each class")
+        else:
+            X.loc[keep, col].value_counts().sort_index().plot(kind="bar", ax=ax)
+            ax.set_ylabel("Number of rows")
+        ax.set_title(col)
     fig.tight_layout()
     return fig

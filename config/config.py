@@ -21,6 +21,10 @@ class Config:
 
     # Data loading rules
     MIN_ROWS = 50
+    
+    # Seaborn custom
+    GRID_MAX_PLOTS = 12           # most plots shown in each "all features" grid
+    GRID_COLUMNS = 3              # plots per row
 
     # Cleaning rules
     ID_UNIQUE_RATIO = 0.95        # 95%+ unique values -> looks like an ID
@@ -37,8 +41,29 @@ class Config:
     MAX_ANNOTATED_COLS = 25       # write numbers inside the heatmap up to this many columns
     IMBALANCE_WARN_RATIO = 3
 
+    # Imputation
+    IMPUTE_STRATEGIES = ["mean", "median", "most_frequent"]
+    DEFAULT_NUMERIC_IMPUTE = "median"
+    DEFAULT_CATEGORICAL_IMPUTE = "most_frequent"
+
+    # SVM Model
+    # Training
+    SVM_MAX_ROWS = 10000          # SVM gets very slow on big data, so skip it above this size
+    TOP_N_PLOTS = 3               # how many top models get plots
+
+    # Overfitting labels (gap = train score - validation score)
+    OVERFIT_SMALL_GAP = 0.05
+    OVERFIT_BIG_GAP = 0.15
+
+    # Create folder for model and experimenet that register by MLFlow
     os.makedirs(MODEL_DIR, exist_ok=True)
     os.makedirs(EXPERIMENT_DIR, exist_ok=True)
+
+    # Tuning
+    TUNE_N_ITER = 20              # random combinations to try
+    
+    # MLflow
+    MLFLOW_EXPERIMENT = "automl"
 
 
 config = Config()

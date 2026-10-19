@@ -43,3 +43,7 @@ test_phasse1.py
 
 # Visualization
 check_*.png
+
+# Experiment and model outputs
+experiments/
+models/
