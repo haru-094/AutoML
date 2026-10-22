@@ -30,7 +30,7 @@ def plot_confusion_matrix(y_true, y_pred, class_names, name):
     fig.tight_layout()
     return fig
 
-STATUS_COLORS = {"Good fit": "green", "Slight overfit": "darkorange", "Overfit": "firebrick"}
+STATUS_COLORS = {"Small gap": "green", "Slight overfit": "darkorange", "Large gap": "firebrick"}
 
 
 def _score_columns(task):

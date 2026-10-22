@@ -1,4 +1,5 @@
 import pandas as pd
+from pathlib import Path
 from config import config
 
 COMMON_TARGET_NAMES = ["target", "label", "class", "y", "survived",
@@ -7,7 +8,8 @@ COMMON_TARGET_NAMES = ["target", "label", "class", "y", "survived",
 
 def list_samples():
     """Names of the sample datasets in the dataset folder (without .csv)."""
-    return [file.stem for file in config.SAMPLE_DIR.glob("*.csv")]
+    return [file.relative_to(config.SAMPLE_DIR).with_suffix("").as_posix()
+            for file in config.SAMPLE_DIR.rglob("*") if file.is_file() and file.suffix.lower() == ".csv"]
 
 
 def guess_target(df):
@@ -31,19 +33,31 @@ def load_dataset(file=None, sample_name=None):
     # Case 2: try to read the data
     try:
         if file is not None:
-            if file.name.endswith(".csv"):
+            suffix = Path(file.name).suffix.lower()
+            if suffix == ".csv":
                 df = pd.read_csv(file)
-            elif file.name.endswith(".xlsx"):
+            elif suffix == ".xlsx":
                 df = pd.read_excel(file)
             else:
                 return None, "Unsupported file type. Use CSV or XLSX."
         else:
-            df = pd.read_csv(config.SAMPLE_DIR / f"{sample_name}.csv")
+            sample_path = config.SAMPLE_DIR / f"{sample_name}.csv"
+            if not sample_path.is_file():
+                matches = [path for path in config.SAMPLE_DIR.rglob("*")
+                           if path.is_file() and path.suffix.lower() == ".csv"
+                           and path.stem.casefold() == Path(sample_name).name.casefold()]
+                if len(matches) == 1:
+                    sample_path = matches[0]
+            df = pd.read_csv(sample_path)
     except Exception as e:
         return None, f"Could not read the file: {e}"
 
     # Case 3: check the data is usable
-    df.columns = df.columns.str.strip()   # remove accidental spaces in column names
+    df.columns = df.columns.map(lambda name: name.strip() if isinstance(name, str) else name)
+
+    if df.columns.has_duplicates:
+        duplicates = df.columns[df.columns.duplicated()].unique().tolist()
+        return None, f"Column names must be unique after trimming whitespace. Duplicates: {duplicates}"
 
     if df.empty:
         return None, "The file is empty."

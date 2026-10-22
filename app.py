@@ -32,7 +32,7 @@ options = ["(none)"] + list_samples()
 # Find the default sample, ignoring capitals and spaces
 default = "(none)"
 for name in options:
-    if config.DEFAULT_SAMPLE and name.strip().lower() == config.DEFAULT_SAMPLE.strip().lower():
+    if config.DEFAULT_SAMPLE and name.rsplit("/", 1)[-1].strip().lower() == config.DEFAULT_SAMPLE.strip().lower():
         default = name
 
 # Set the starting value only once per browser session
@@ -66,16 +66,26 @@ task = st.radio("Problem type", ["classification", "regression"],
                 index=0 if task == "classification" else 1, horizontal=True, key="task_radio")
 
 # ---------- Step 3: split and clean ----------
-X_train, X_val, X_test, y_train, y_val, y_test = split_data(
-    df, target, stratify=(task == "classification"))
+try:
+    X_train, X_val, X_test, y_train, y_val, y_test = split_data(
+        df, target, stratify=(task == "classification"))
+except ValueError as exc:
+    st.error(str(exc))
+    st.stop()
 
-bad = find_bad_columns(X_train)
+id_threshold = st.slider("Flag likely ID columns at unique-value ratio", 0.80, 1.00,
+                         float(config.ID_UNIQUE_RATIO), 0.01)
+drop_float_ids = st.checkbox("Also flag floating-point ID columns", value=False)
+bad = find_bad_columns(X_train, id_unique_ratio=id_threshold, drop_float_ids=drop_float_ids)
 X_train = drop_columns(X_train, bad)
 X_val = drop_columns(X_val, bad)
 X_test = drop_columns(X_test, bad)
 
 if bad:
     st.warning("Dropped columns: " + ", ".join(f"{c} ({r})" for c, r in bad.items()))
+if X_train.shape[1] == 0:
+    st.error("No usable feature columns remain after cleaning. Review the target and ID/missing-value rules.")
+    st.stop()
 
 # ---------- Step 4: EDA on TRAIN ----------
 st.subheader("Explore the data")
@@ -140,7 +150,10 @@ with st.expander("Show all features at once"):
 # ---------- Step 5: preprocessing ----------
 st.subheader("Preprocessing")
 
-continuous_cols, discrete_cols, text_cols = split_columns(X_train)
+categorical_overrides = st.multiselect(
+    "Treat numeric columns as categorical", X_train.select_dtypes(include="number").columns.tolist(),
+    help="Useful for integer codes with many distinct values.", key="categorical_overrides")
+continuous_cols, discrete_cols, text_cols = split_columns(X_train, categorical_overrides)
 st.write(f"Continuous: {len(continuous_cols)} | Few-value: {len(discrete_cols)} | Text: {len(text_cols)}")
 
 suggested = suggest_strategy(X_train[continuous_cols])    # only continuous columns decide this
@@ -152,7 +165,7 @@ st.caption(f"Suggested: {suggested}. Few-value and text columns are always fille
 clip = st.checkbox("Clip outliers (continuous columns only)", value=(task == "regression"),
                    key=f"clip_{task}")
 
-preprocessor = build_preprocessor(X_train, task, strategy, clip)
+preprocessor = build_preprocessor(X_train, task, strategy, clip, categorical_overrides=categorical_overrides)
 preprocessor.fit(X_train)                                  # learns everything from TRAIN only
 
 X_train_ready = transform_to_frame(preprocessor, X_train)
@@ -182,11 +195,12 @@ if st.button("Train", key="train_button"):
     else:
         with st.spinner("Training models..."):
             leaderboard, fitted, errors, encoder = train_models(
-                X_train, y_train, X_val, y_val, task, selected, strategy, clip)
+                X_train, y_train, X_val, y_val, task, selected, strategy, clip,
+                categorical_overrides=categorical_overrides)
         st.session_state["results"] = {
             "leaderboard": leaderboard, "errors": errors, "fitted": fitted,
             "encoder": encoder,
-            "data_key": (sample_name, getattr(file, "name", None), target, task),
+            "data_key": (sample_name, getattr(file, "name", None), target, task, tuple(categorical_overrides), id_threshold, drop_float_ids),
         }
         for key in ("tuning", "test_result"):
             st.session_state.pop(key, None)
@@ -213,7 +227,7 @@ if st.button("Train", key="train_button"):
 
 # Show the results (kept in session_state so they survive other clicks)
 results = st.session_state.get("results")
-if results and results["data_key"] == (sample_name, getattr(file, "name", None), target, task):
+if results and results["data_key"] == (sample_name, getattr(file, "name", None), target, task, tuple(categorical_overrides), id_threshold, drop_float_ids):
     st.subheader("Leaderboard")
     if missing_libraries:
         st.info("Not available on this machine: " + ", ".join(missing_libraries) + ". The other models still work.")
@@ -226,7 +240,7 @@ if results and results["data_key"] == (sample_name, getattr(file, "name", None),
         st.dataframe(results["leaderboard"])
         st.success(f"Best model: {results['leaderboard'].iloc[0]['model']}")
         best = results["leaderboard"].iloc[0]
-        if best["fit"] == "Overfit":
+        if best["fit"] == "Large gap":
             st.warning(f"{best['model']} has the best validation score but overfits "
                     f"(gap {best['gap']}). Tuning with regularization may help.")
 
@@ -235,9 +249,8 @@ if results and results["data_key"] == (sample_name, getattr(file, "name", None),
             st.pyplot(plot_model_scores(results["leaderboard"], task))
         with tab_fit:
             st.pyplot(plot_overfitting(results["leaderboard"], task))
-            st.caption("Gap = train score minus validation score. A big gap means the model memorized "
-                    "the training data. Low scores on both sides mean the model is too simple "
-                    "for this data (underfitting).")
+            st.caption("Gap = train score minus validation score. This is an overfitting check only; "
+                    "a small gap does not show whether scores are high enough for the task.")
 
 
         # Plots for the top models
@@ -258,12 +271,9 @@ if results and results["data_key"] == (sample_name, getattr(file, "name", None),
     for name, message in results["errors"].items():
         st.warning(f"{name}: {message}")
 
-    for name, message in results["errors"].items():
-        st.warning(f"{name}: {message}")
-
 # ---------- Step 7: tune a model ----------
 results = st.session_state.get("results")
-data_key = (sample_name, getattr(file, "name", None), target, task)
+data_key = (sample_name, getattr(file, "name", None), target, task, tuple(categorical_overrides), id_threshold, drop_float_ids)
 
 if results and results["data_key"] == data_key and not results["leaderboard"].empty:
     leaderboard = results["leaderboard"]
@@ -291,7 +301,8 @@ if results and results["data_key"] == data_key and not results["leaderboard"].em
             st.session_state.pop(key, None)
 
         with st.spinner(f"Tuning {model_to_tune}: {n_iter} combinations x {config.CV_FOLDS} folds..."):
-            search = tune_model(model_to_tune, task, X_train, y_train_num, strategy, clip, n_iter)
+            search = tune_model(model_to_tune, task, X_train, y_train_num, strategy, clip, n_iter,
+                                categorical_overrides=categorical_overrides)
 
         if search is None:
             st.info(f"{model_to_tune} has no settings to tune. Pick another model.")

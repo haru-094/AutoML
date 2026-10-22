@@ -8,12 +8,13 @@ from src.preprocessing.imputer import make_numeric_imputer, make_categorical_imp
 from src.preprocessing.outlier import OutlierHandler
 
 
-def build_preprocessor(X_train, task, impute_strategy="median", clip_outliers=False, scale=True):
+def build_preprocessor(X_train, task, impute_strategy="median", clip_outliers=False, scale=True,
+                      categorical_overrides=None):
     """
     Builds the preprocessing recipe. It is NOT fitted yet.
     X_train is only used to look at the column names and types.
     """
-    continuous, discrete, text = split_columns(X_train)
+    continuous, discrete, text = split_columns(X_train, categorical_overrides)
     parts = []
 
     # 1. Continuous numbers: fill -> clip (optional) -> scale (optional)
