@@ -7,12 +7,12 @@ def make_numeric_imputer(strategy=None):
     strategy = strategy or config.DEFAULT_NUMERIC_IMPUTE
     if strategy not in config.IMPUTE_STRATEGIES:
         raise ValueError(f"Unknown strategy '{strategy}'. Choose from {config.IMPUTE_STRATEGIES}")
-    return SimpleImputer(strategy=strategy)
+    return SimpleImputer(strategy=strategy, keep_empty_features=True)
 
 
 def make_categorical_imputer():
     """Imputer for text columns: always the most frequent value."""
-    return SimpleImputer(strategy=config.DEFAULT_CATEGORICAL_IMPUTE)
+    return SimpleImputer(strategy=config.DEFAULT_CATEGORICAL_IMPUTE, keep_empty_features=True)
 
 
 def suggest_strategy(X_train):

@@ -9,7 +9,8 @@ from src.modeling.evaluator import score_regression, score_classification, score
 from src.preprocessing.pipeline_builder import build_preprocessor
 
 
-def train_models(X_train, y_train, X_val, y_val, task, model_names, strategy, clip):
+def train_models(X_train, y_train, X_val, y_val, task, model_names, strategy, clip,
+                categorical_overrides=None):
     """
     Trains every selected model. Returns (leaderboard, fitted_models, errors, encoder).
     """
@@ -34,7 +35,8 @@ def train_models(X_train, y_train, X_val, y_val, task, model_names, strategy, cl
             continue
 
         # One pipeline per model: preprocessing + model together
-        preprocessor = build_preprocessor(X_train, task, strategy, clip, scale=info["needs_scaling"])
+        preprocessor = build_preprocessor(X_train, task, strategy, clip, scale=info["needs_scaling"],
+                                          categorical_overrides=categorical_overrides)
         pipeline = Pipeline([("prep", preprocessor), ("model", info["model"])])
 
         try:
@@ -66,7 +68,6 @@ def train_models(X_train, y_train, X_val, y_val, task, model_names, strategy, cl
         rank_by = "val_r2" if task == "regression" else "val_f1_macro"
         leaderboard = leaderboard.sort_values(rank_by, ascending=False).reset_index(drop=True)
         leaderboard.index = leaderboard.index + 1          # rank starts at 1
-        leaderboard = leaderboard.round(4)
         leaderboard = leaderboard.round(4)
         leaderboard = score_overfitting(leaderboard, task)
 

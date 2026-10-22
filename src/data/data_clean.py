@@ -2,7 +2,7 @@ import pandas as pd
 from config import config
 
 
-def find_bad_columns(X_train):
+def find_bad_columns(X_train, id_unique_ratio=None, drop_float_ids=False):
     """Returns a dict like {"customer_id": "looks like an ID"}."""
     bad = {}
     n_rows = len(X_train)
@@ -17,7 +17,8 @@ def find_bad_columns(X_train):
         elif n_unique <= 1:
             bad[col] = "same value in every row"
 
-        elif not pd.api.types.is_float_dtype(values) and n_unique / n_rows >= config.ID_UNIQUE_RATIO:
+        elif (n_rows and n_unique / n_rows >= (id_unique_ratio or config.ID_UNIQUE_RATIO)
+              and (drop_float_ids or not pd.api.types.is_float_dtype(values))):
             bad[col] = "looks like an ID (almost every value is unique)"
 
         elif values.dtype == "object" and n_unique > config.MAX_CATEGORY_UNIQUE:

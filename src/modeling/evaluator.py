@@ -20,7 +20,7 @@ def score_classification(y_true, y_pred):
     }
 
 def score_overfitting(leaderboard, task):
-    """Adds a 'gap' column (train - validation) and a 'fit' label to the leaderboard."""
+    """Adds a train-validation gap and labels its overfitting risk only."""
     score = "r2" if task == "regression" else "f1_macro"
     board = leaderboard.copy()
 
@@ -28,10 +28,10 @@ def score_overfitting(leaderboard, task):
 
     def label(gap):
         if gap < config.OVERFIT_SMALL_GAP:
-            return "Good fit"
+            return "Small gap"
         if gap < config.OVERFIT_BIG_GAP:
             return "Slight overfit"
-        return "Overfit"
+            return "Large gap"
 
     board["fit"] = board["gap"].apply(label)
     return board
