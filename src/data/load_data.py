@@ -53,7 +53,7 @@ def load_dataset(file=None, sample_name=None):
         return None, f"Could not read the file: {e}"
 
     # Case 3: check the data is usable
-    df.columns = df.columns.map(lambda name: name.strip() if isinstance(name, str) else name)
+    df.columns = [name.strip() if isinstance(name, str) else name for name in df.columns]
 
     if df.columns.has_duplicates:
         duplicates = df.columns[df.columns.duplicated()].unique().tolist()

@@ -17,9 +17,10 @@ def find_bad_columns(X_train, id_unique_ratio=None, drop_float_ids=False):
         elif n_unique <= 1:
             bad[col] = "same value in every row"
 
-        elif (n_rows and n_unique / n_rows >= (id_unique_ratio or config.ID_UNIQUE_RATIO)
-              and (drop_float_ids or not pd.api.types.is_float_dtype(values))):
-            bad[col] = "looks like an ID (almost every value is unique)"
+        elif n_rows and n_unique / n_rows >= (id_unique_ratio or config.ID_UNIQUE_RATIO):
+                is_float_id = pd.api.types.is_float_dtype(values)
+                if drop_float_ids or not is_float_id:
+                        bad[col] = "looks like an ID (almost every value is unique)"
 
         elif values.dtype == "object" and n_unique > config.MAX_CATEGORY_UNIQUE:
             bad[col] = "too many different text values"

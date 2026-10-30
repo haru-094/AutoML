@@ -85,18 +85,18 @@ class CorePipelineTests(unittest.TestCase):
     frame.loc[0:4, "x"] = np.nan
     y_class = pd.Series(["yes", "no"] * 40)
     result = train_models(frame.iloc[:60], y_class.iloc[:60], frame.iloc[60:], y_class.iloc[60:],
-                          "classification", ["Logistic Regression"], "median", False)
+                          "classification", ["Logistic Regression"], "median")
     self.assertFalse(result[0].empty)
     self.assertIn("Logistic Regression", result[1])
 
     y_reg = pd.Series(frame["x"].fillna(0) * 2 + rng.normal(scale=0.1, size=80))
     result = train_models(frame.iloc[:60], y_reg.iloc[:60], frame.iloc[60:], y_reg.iloc[60:],
-                          "regression", ["Linear Regression"], "median", False)
+                          "regression", ["Linear Regression"], "median")
     self.assertFalse(result[0].empty)
     self.assertIn("Linear Regression", result[1])
 
   def test_tuning_uses_feasible_folds_for_rare_class(self):
     X = pd.DataFrame({"x": np.arange(12, dtype=float)})
     y = np.array([0] * 9 + [1] * 3)
-    search = tune_model("Logistic Regression", "classification", X, y, "median", False, n_iter=1)
+    search = tune_model("Logistic Regression", "classification", X, y, "median", n_iter=1)
     self.assertEqual(search.cv, 3)

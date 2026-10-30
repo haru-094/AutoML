@@ -31,7 +31,7 @@ def score_overfitting(leaderboard, task):
             return "Small gap"
         if gap < config.OVERFIT_BIG_GAP:
             return "Slight overfit"
-            return "Large gap"
+        return "Large gap"
 
     board["fit"] = board["gap"].apply(label)
     return board

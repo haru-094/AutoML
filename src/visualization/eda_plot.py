@@ -30,6 +30,18 @@ def class_balance(y):
     return (y.value_counts(normalize=True) * 100).round(1)
 
 
+def _top_categories(X, col):
+    """Return the most common values in a column."""
+    return X[col].value_counts().head(config.TOP_N_CATEGORIES).index
+
+
+def _class_percentages(X, y, col):
+    """Return the percentage of each class for each category."""
+    top = _top_categories(X, col)
+    keep = X[col].isin(top)
+    return pd.crosstab(X.loc[keep, col], y[keep], normalize="index") * 100
+
+
 def draw_distribution(ax, values):
     """Histogram + smooth density curve (KDE) on the same axes."""
     ax.hist(values, bins=30, density=True, alpha=0.6)
@@ -199,9 +211,7 @@ def plot_feature_by_class(X, y, col):
         ax.set_title(f"{col} by {y.name}")
     else:
         # Categories (or numbers with few values): % of each class inside each category
-        top = X[col].value_counts().index[:config.TOP_N_CATEGORIES]
-        keep = X[col].isin(top)
-        table = pd.crosstab(X.loc[keep, col], y[keep], normalize="index") * 100
+        table = _class_percentages(X, y, col)
         table.plot(kind="bar", stacked=True, ax=ax)
         ax.set_ylabel(f"% of rows in each {y.name} class")
         ax.set_title(f"{y.name} rate for each {col}")
@@ -234,7 +244,7 @@ def plot_feature_signal(X, y):
 def make_grid(n_plots):
     """Creates a grid of empty plots. Returns the figure and a flat list of axes."""
     n_cols = config.GRID_COLUMNS
-    n_rows = -(-n_plots // n_cols)                  # divide and round up
+    n_rows = (n_plots + n_cols - 1) // n_cols
     fig, axes = plt.subplots(n_rows, n_cols, figsize=(5 * n_cols, 3.5 * n_rows))
     axes = np.array(axes).ravel()
     for ax in axes[n_plots:]:
@@ -274,14 +284,13 @@ def plot_category_grid(X, y, task):
 
     fig, axes = make_grid(len(cols))
     for ax, col in zip(axes, cols):
-        top = X[col].value_counts().index[:config.TOP_N_CATEGORIES]
-        keep = X[col].isin(top)
-
         if task == "classification":
-            table = pd.crosstab(X.loc[keep, col], y[keep], normalize="index") * 100
+            table = _class_percentages(X, y, col)
             table.plot(kind="bar", stacked=True, ax=ax, legend=False)
             ax.set_ylabel("% in each class")
         else:
+            top = _top_categories(X, col)
+            keep = X[col].isin(top)
             X.loc[keep, col].value_counts().sort_index().plot(kind="bar", ax=ax)
             ax.set_ylabel("Number of rows")
         ax.set_title(col)

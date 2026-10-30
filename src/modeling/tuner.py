@@ -9,7 +9,7 @@ from src.modeling.param_grids import PARAM_GRIDS
 from src.preprocessing.pipeline_builder import build_preprocessor
 
 
-def tune_model(name, task, X_train, y_train, strategy, clip, n_iter=None, categorical_overrides=None):
+def tune_model(name, task, X_train, y_train, strategy, n_iter=None, categorical_overrides=None):
     """
     Searches for better settings for one model, using cross-validation on TRAIN only.
     y_train must already be numbers (for classification, the encoded classes).
@@ -35,7 +35,7 @@ def tune_model(name, task, X_train, y_train, strategy, clip, n_iter=None, catego
 
     # The same pipeline as in the trainer: preprocessing + model
     info = get_models(task)[name]
-    preprocessor = build_preprocessor(X_train, task, strategy, clip, scale=info["needs_scaling"],
+    preprocessor = build_preprocessor(X_train, task, strategy, scale=info["needs_scaling"],
                                       categorical_overrides=categorical_overrides)
     pipeline = Pipeline([("prep", preprocessor), ("model", info["model"])])
 

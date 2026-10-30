@@ -38,6 +38,9 @@ test_phasse1.py
 # Jupyter
 .ipynb_checkpoints/
 
+# Explan
+explanation/
+
 # macOS
 .DS_Store
 
