@@ -150,20 +150,6 @@ AutoML/
 └── requirements.txt               # pip dependency list
 ```
 
-## Running tests
-
-With uv:
-
-```bash
-uv run python -m unittest tests/test_core_pipeline.py
-```
-
-With an activated pip environment:
-
-```bash
-python -m unittest tests/test_core_pipeline.py
-```
-
 ## Troubleshooting
 
 ### `uv: command not found`
