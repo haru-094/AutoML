@@ -7,6 +7,7 @@ from config import config
 from src.modeling.model_list import get_models
 from src.modeling.param_grids import PARAM_GRIDS
 from src.preprocessing.pipeline_builder import build_preprocessor
+from src.preprocessing.selection import SafeVarianceSelector
 
 
 def tune_model(name, task, X_train, y_train, strategy, n_iter=None, categorical_overrides=None):
@@ -37,7 +38,8 @@ def tune_model(name, task, X_train, y_train, strategy, n_iter=None, categorical_
     info = get_models(task)[name]
     preprocessor = build_preprocessor(X_train, task, strategy, scale=info["needs_scaling"],
                                       categorical_overrides=categorical_overrides)
-    pipeline = Pipeline([("prep", preprocessor), ("model", info["model"])])
+    pipeline = Pipeline([("prep", preprocessor), ("selection", SafeVarianceSelector()),
+                         ("model", info["model"])])
 
     # Inside a pipeline, settings are named step__setting: "alpha" becomes "model__alpha"
     param_space = {f"model__{key}": values for key, values in grid.items()}

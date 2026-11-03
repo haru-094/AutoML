@@ -7,6 +7,7 @@ from config import config
 from src.modeling.model_list import get_models
 from src.modeling.evaluator import score_regression, score_classification, score_overfitting
 from src.preprocessing.pipeline_builder import build_preprocessor
+from src.preprocessing.selection import SafeVarianceSelector
 
 
 def train_models(X_train, y_train, X_val, y_val, task, model_names, strategy,
@@ -37,7 +38,8 @@ def train_models(X_train, y_train, X_val, y_val, task, model_names, strategy,
         # One pipeline per model: preprocessing + model together
         preprocessor = build_preprocessor(X_train, task, strategy, scale=info["needs_scaling"],
                                           categorical_overrides=categorical_overrides)
-        pipeline = Pipeline([("prep", preprocessor), ("model", info["model"])])
+        pipeline = Pipeline([("prep", preprocessor), ("selection", SafeVarianceSelector()),
+                             ("model", info["model"])])
 
         try:
             start = time.time()

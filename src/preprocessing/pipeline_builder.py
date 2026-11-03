@@ -4,6 +4,7 @@ from sklearn.preprocessing import StandardScaler, RobustScaler, OneHotEncoder
 
 from src.preprocessing.columns import split_columns
 from src.preprocessing.imputer import make_numeric_imputer, make_categorical_imputer
+from src.preprocessing.outliers import IQRClipper
 
 
 def build_preprocessor(X_train, task, impute_strategy="median", scale=True, categorical_overrides=None):
@@ -16,7 +17,7 @@ def build_preprocessor(X_train, task, impute_strategy="median", scale=True, cate
 
     # 1. Continuous numbers: fill -> scale (optional)
     if continuous:
-        steps = [("fill", make_numeric_imputer(impute_strategy))]
+        steps = [("fill", make_numeric_imputer(impute_strategy)), ("outliers", IQRClipper())]
         if scale:
             scaler = RobustScaler() if task == "classification" else StandardScaler()
             steps.append(("scale", scaler))
@@ -32,4 +33,8 @@ def build_preprocessor(X_train, task, impute_strategy="median", scale=True, cate
                  ("onehot", OneHotEncoder(handle_unknown="ignore", sparse_output=False))]
         parts.append(("text", Pipeline(steps), text))
 
-    return ColumnTransformer(parts, verbose_feature_names_out=False, sparse_threshold=0)
+    columns = ColumnTransformer(parts, verbose_feature_names_out=False, sparse_threshold=0)
+    # Constant transformed columns add no predictive signal and can destabilize
+    # models when a dataset has very few informative features. This selector is
+    # unsupervised, so preprocessing also remains usable without y values.
+    return columns

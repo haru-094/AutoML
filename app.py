@@ -16,6 +16,7 @@ from src.tracking.mlflow_logger import log_training_run, log_simple_run
 
 from src.modeling.tuner import tune_model
 from src.modeling.evaluator import score_regression, score_classification
+from src.modeling.exported_model import ExportedModel
 
 st.title("AutoML")
 upload_tab, eda_tab, prep_tab, split_tab, train_tab, tune_tab, save_tab = st.tabs([
@@ -45,11 +46,15 @@ if error:
     st.info(error)      # friendly message when nothing is uploaded
     st.stop()           # stop here, nothing below runs
 
+duplicate_count = int(df.duplicated().sum())
+if duplicate_count:
+    df = df.drop_duplicates().reset_index(drop=True)
+
 with upload_tab:
     st.subheader("First 5 rows")
     st.dataframe(df.head(5))
     st.dataframe(overview_table(df))
-    st.write(f"Duplicate rows: {df.duplicated().sum()}")
+    st.write(f"Duplicate rows removed: {duplicate_count}")
     st.write(f"Missing values: {int(df.isna().sum().sum())}")
 
 # ---------- Step 2: target ----------
@@ -158,6 +163,8 @@ with prep_tab:
                             index=0 if default_strategy == "mean" else 1, key="impute_strategy")
     st.write(f"Numeric missing values: {strategy}.")
     st.write("Text categories are filled with the most common value and one-hot encoded.")
+    st.write("Numeric outliers are clipped to 1.5 × IQR bounds learned from training data only.")
+    st.write("Constant features are removed inside each model pipeline.")
     st.caption("Preprocessing is fitted on training data inside each model pipeline.")
 
 with split_tab:
@@ -357,16 +364,6 @@ if results and results["data_key"] == data_key and not results["leaderboard"].em
                 final_pipeline = results["fitted"][final_name]
 
             st.write(f"Final model: **{final_name}**")
-            st.download_button(
-                "Download final model (.pkl)",
-                data=pickle.dumps(final_pipeline),
-                file_name="automl_model.pkl",
-                mime="application/octet-stream",
-                key="download_model",
-            )
-            st.caption("The test set is only honest if you look at it once. If you check the score and then change "
-                       "settings to improve it, the test set is no longer independent.")
-
             if st.button("Evaluate on the test set", key="test_button"):
                 pred_val = final_pipeline.predict(X_val)
                 pred_test = final_pipeline.predict(X_test)
@@ -402,3 +399,15 @@ if results and results["data_key"] == data_key and not results["leaderboard"].em
                 else:
                     st.pyplot(plot_confusion_matrix(y_test_num, test_result["pred_test"],
                                                     encoder.classes_, final_name))
+
+            st.divider()
+            st.subheader("Download the final model")
+            st.download_button(
+                "Download final model (.pkl)",
+                data=pickle.dumps(ExportedModel(final_pipeline, encoder if task == "classification" else None)),
+                file_name="automl_model.pkl",
+                mime="application/octet-stream",
+                key="download_model",
+            )
+            st.caption("For classification, the downloaded model returns the original target labels. The test set is only honest if you look at it once. If you check the score and then change "
+                       "settings to improve it, the test set is no longer independent.")
