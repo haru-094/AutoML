@@ -34,17 +34,14 @@ def tune_model(name, task, X_train, y_train, strategy, n_iter=None, categorical_
         if not grid["n_neighbors"]:
             grid["n_neighbors"] = [1]
 
-    # The same pipeline as in the trainer: preprocessing + model
     info = get_models(task)[name]
     preprocessor = build_preprocessor(X_train, task, strategy, scale=info["needs_scaling"],
                                       categorical_overrides=categorical_overrides)
     pipeline = Pipeline([("prep", preprocessor), ("selection", SafeVarianceSelector()),
                          ("model", info["model"])])
 
-    # Inside a pipeline, settings are named step__setting: "alpha" becomes "model__alpha"
     param_space = {f"model__{key}": values for key, values in grid.items()}
 
-    # Cannot try more combinations than exist
     n_combinations = 1
     for values in grid.values():
         n_combinations *= len(values)
@@ -53,10 +50,10 @@ def tune_model(name, task, X_train, y_train, strategy, n_iter=None, categorical_
     search = RandomizedSearchCV(
         pipeline, param_space,
         n_iter=n_iter,
-        scoring="r2" if task == "regression" else "f1_macro",     # same rule as the leaderboard
+        scoring="r2" if task == "regression" else "f1_macro",
         cv=folds,
         random_state=config.RANDOM_STATE,
-        n_jobs=1,                  # one at a time: safest on a Mac (models already use all cores)
+        n_jobs=1,
     )
-    search.fit(X_train, y_train)   # after the search, search.best_estimator_ is refitted on all of train
+    search.fit(X_train, y_train)
     return search

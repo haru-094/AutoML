@@ -20,7 +20,6 @@ def train_models(X_train, y_train, X_val, y_val, task, model_names, strategy,
     fitted = {}
     rows = []
 
-    # Classification: turn class names into numbers 0, 1, 2... (XGBoost needs this)
     encoder = None
     if task == "classification":
         encoder = LabelEncoder().fit(y_train)
@@ -30,12 +29,10 @@ def train_models(X_train, y_train, X_val, y_val, task, model_names, strategy,
     for name in model_names:
         info = models[name]
 
-        # Skip slow models on big data instead of freezing the app
         if info.get("slow") and len(X_train) > config.SVM_MAX_ROWS:
             errors[name] = f"skipped: more than {config.SVM_MAX_ROWS} rows (too slow)"
             continue
 
-        # One pipeline per model: preprocessing + model together
         preprocessor = build_preprocessor(X_train, task, strategy, scale=info["needs_scaling"],
                                           categorical_overrides=categorical_overrides)
         pipeline = Pipeline([("prep", preprocessor), ("selection", SafeVarianceSelector()),
@@ -43,7 +40,7 @@ def train_models(X_train, y_train, X_val, y_val, task, model_names, strategy,
 
         try:
             start = time.time()
-            pipeline.fit(X_train, y_train)                 # fit on TRAIN only
+            pipeline.fit(X_train, y_train)
             seconds = time.time() - start
 
             if task == "regression":
@@ -62,14 +59,14 @@ def train_models(X_train, y_train, X_val, y_val, task, model_names, strategy,
             rows.append(row)
             fitted[name] = pipeline
 
-        except Exception as e:                             # one failing model must not stop the rest
+        except Exception as e:
             errors[name] = str(e)
 
     leaderboard = pd.DataFrame(rows)
     if not leaderboard.empty:
         rank_by = "val_r2" if task == "regression" else "val_f1_macro"
         leaderboard = leaderboard.sort_values(rank_by, ascending=False).reset_index(drop=True)
-        leaderboard.index = leaderboard.index + 1          # rank starts at 1
+        leaderboard.index = leaderboard.index + 1
         leaderboard = leaderboard.round(4)
         leaderboard = score_overfitting(leaderboard, task)
 

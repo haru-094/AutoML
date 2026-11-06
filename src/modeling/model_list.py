@@ -10,12 +10,11 @@ from config import config
 RS = config.RANDOM_STATE
 JOBS = config.N_JOBS
 
-# Optional libraries: if one fails to load, we skip it instead of crashing
 missing_libraries = []
 
 try:
     from xgboost import XGBRegressor, XGBClassifier
-except Exception:                      # not only ImportError: XGBoost raises its own error type
+except Exception:
     XGBRegressor = XGBClassifier = None
     missing_libraries.append("XGBoost")
 

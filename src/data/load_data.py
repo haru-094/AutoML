@@ -16,8 +16,8 @@ def guess_target(df):
     """Returns the position (index) of the most likely target column."""
     for i, col in enumerate(df.columns):
         if col.lower() in COMMON_TARGET_NAMES:
-            return i                       # a column with a typical target name
-    return len(df.columns) - 1             # otherwise the last column
+            return i
+    return len(df.columns) - 1
 
 
 def load_dataset(file=None, sample_name=None):
@@ -26,11 +26,9 @@ def load_dataset(file=None, sample_name=None):
     If it worked: (DataFrame, None)
     If it failed: (None, "message for the user")
     """
-    # Case 1: nothing provided
     if file is None and sample_name is None:
         return None, "No dataset provided. Upload a file or pick a sample."
 
-    # Case 2: try to read the data
     try:
         if file is not None:
             suffix = Path(file.name).suffix.lower()
@@ -52,7 +50,6 @@ def load_dataset(file=None, sample_name=None):
     except Exception as e:
         return None, f"Could not read the file: {e}"
 
-    # Case 3: check the data is usable
     df.columns = [name.strip() if isinstance(name, str) else name for name in df.columns]
 
     if df.columns.has_duplicates:

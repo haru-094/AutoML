@@ -1,5 +1,3 @@
-# Settings to search for each model. The search picks random combinations from these lists.
-
 FOREST = {
     "n_estimators": [100, 200, 300],
     "max_depth": [None, 5, 10, 20],
@@ -34,7 +32,7 @@ KNN = {
 }
 
 PARAM_GRIDS = {
-    "Linear Regression": {},                       # nothing to tune
+    "Linear Regression": {},
     "Ridge": {"alpha": [0.01, 0.1, 1, 10, 100]},
     "Logistic Regression": {"C": [0.01, 0.1, 1, 10, 100]},
     "Decision Tree": {"max_depth": [3, 5, 7, 10, None], "min_samples_leaf": [1, 2, 5, 10]},
