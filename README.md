@@ -5,6 +5,14 @@ pipelines for tabular data. It helps you inspect a dataset, prepare features,
 compare multiple models, tune the best candidate, and download the resulting
 model for later use.
 
+## Demo 
+
+https://github.com/user-attachments/assets/4f47182b-696d-4d94-873e-22d2022649ed
+
+
+
+
+
 ## Features
 
 - Upload CSV or XLSX datasets, or use the included sample data.
