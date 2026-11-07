@@ -19,9 +19,9 @@ from src.modeling.evaluator import score_regression, score_classification
 from src.modeling.exported_model import ExportedModel
 
 st.title("AutoML")
-upload_tab, eda_tab, prep_tab, split_tab, train_tab, tune_tab, save_tab = st.tabs([
-    "1. Upload data", "2. EDA", "3. Preprocessing", "4. Split data",
-    "5. Train & leaderboard", "6. Tune model", "7. Save model",
+upload_tab, eda_tab, split_tab, train_tab, tune_tab, save_tab = st.tabs([
+    "1. Upload data", "2. EDA", "3. Split data",
+    "4. Train & leaderboard", "5. Tune model", "6. Save model",
 ])
 
 # ---------- Step 1: upload ----------
@@ -75,18 +75,13 @@ except ValueError as exc:
     st.error(str(exc))
     st.stop()
 
-with prep_tab:
-    id_threshold = st.slider("Flag likely ID columns at unique-value ratio", 0.80, 1.00,
-                             float(config.ID_UNIQUE_RATIO), 0.01)
-    drop_float_ids = st.checkbox("Also flag floating-point ID columns", value=False)
+id_threshold = config.ID_UNIQUE_RATIO
+drop_float_ids = False
 bad = find_bad_columns(X_train, id_unique_ratio=id_threshold, drop_float_ids=drop_float_ids)
 X_train = drop_columns(X_train, bad)
 X_val = drop_columns(X_val, bad)
 X_test = drop_columns(X_test, bad)
 
-with prep_tab:
-    if bad:
-        st.warning("Dropped columns: " + ", ".join(f"{c} ({r})" for c, r in bad.items()))
 if X_train.shape[1] == 0:
     st.error("No usable feature columns remain after cleaning. Review the target and ID/missing-value rules.")
     st.stop()
@@ -154,18 +149,9 @@ with eda_tab:
             st.dataframe(pairs, use_container_width=True)
 
 # ---------- Step 5: automatic preprocessing ----------
-with prep_tab:
-    st.subheader("Preprocessing")
-    categorical_overrides = []
-    continuous_cols, _, _ = split_columns(X_train)
-    default_strategy = suggest_strategy(X_train[continuous_cols])
-    strategy = st.selectbox("Numeric missing-value strategy", ["mean", "median"],
-                            index=0 if default_strategy == "mean" else 1, key="impute_strategy")
-    st.write(f"Numeric missing values: {strategy}.")
-    st.write("Text categories are filled with the most common value and one-hot encoded.")
-    st.write("Numeric outliers are clipped to 1.5 × IQR bounds learned from training data only.")
-    st.write("Constant features are removed inside each model pipeline.")
-    st.caption("Preprocessing is fitted on training data inside each model pipeline.")
+categorical_overrides = []
+continuous_cols, _, _ = split_columns(X_train)
+strategy = suggest_strategy(X_train[continuous_cols])
 
 with split_tab:
     st.subheader("Train, validation, and test split")
